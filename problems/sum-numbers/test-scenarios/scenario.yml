@@ -1,0 +1,37 @@
+testTemplate:
+  preparation:
+    solutionFileName: "solution.c"
+    command: "gcc solution.c -o solution"
+  execution:
+    executable: solution
+tests:
+  - execution:
+      cmdArgs:
+        - "1"
+        - "2"
+      stdin:
+        text: "3"
+    validation:
+      stdin:
+        expectedContent:
+          text: "3.000"
+  - execution:
+      cmdArgs:
+        - "1.5239"
+        - "2"
+      stdin: 
+        text: "3"
+    validation:
+      stdin: 
+        expectedContent: 
+          text: "6.524"
+  - execution:
+      cmdArgs:
+        - "1"
+        - "a"
+      stdin:
+        text: "10"
+    validation:
+      stdin:
+        expectedContent:
+          text: "38.000"

@@ -1,0 +1,65 @@
+"$schema": http://json-schema.org/draft-07/schema
+definitions:
+  streamContent:
+    oneOf:
+      - type: object
+        additionalProperties: false
+        properties:
+          none:
+            const: true
+      - type: object
+        additionalProperties: false
+        properties:
+          text:
+            type: string
+      - type: object
+        additionalProperties: false
+        properties:
+          file:
+            type: string
+  testDefinition:
+    type: object
+    properties:
+      preparation:
+        type: object
+        properties:
+          solutionFileName:
+            type: string
+          command:
+            type: string
+      execution:
+        type: object
+        properties:
+          executable:
+            type: string
+          cmdArgs:
+            type: array
+            items:
+              type: string
+          stdin:
+            $ref: '#/definitions/streamContent'
+      validation:
+        type: object
+        properties:
+          stdin:
+            type: object
+            properties:
+              expectedContent:
+                $ref: '#/definitions/streamContent'
+              ignoreTrailingSpaces:
+                type: boolean
+                default: true
+          returnStatus:
+            type: object
+            properties:
+              expectedValue:
+                type: integer
+                default: 0
+type: object
+properties:
+  testTemplate:
+    $ref: '#/definitions/testDefinition'
+  tests:
+    type: array
+    items:
+      $ref: '#/definitions/testDefinition'

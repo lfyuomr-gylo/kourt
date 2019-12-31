@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
     } else if (pid > 0) {
         // parent
         int childStatus;
-        waitpid(pid, &childStatus, WEXITED);
+        waitpid(pid, &childStatus, 0);
         printExitStatus(childStatus, config);
     } else {
         // TODO: handle fork failure correctly

@@ -4,8 +4,8 @@ project(runner)
 set(CMAKE_CXX_STANDARD 17)
 
 # ==== JSON library setup
-set(JSON_BuildTests OFF CACHE INTERNAL "")
 include(FetchContent)
+set(JSON_BuildTests OFF CACHE INTERNAL "")
 FetchContent_Declare(
         nlohmann_json
         GIT_REPOSITORY https://github.com/nlohmann/json.git
@@ -15,5 +15,10 @@ FetchContent_MakeAvailable(nlohmann_json)
 
 ### ==== Runner executable
 
-add_executable(runner main.cpp)
+add_executable(runner src/main.cpp)
 target_link_libraries(runner nlohmann_json::nlohmann_json)
+
+enable_testing()
+add_test(NAME runner_tests
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/runner_tests.py $<TARGET_FILE:runner>
+)

@@ -29,6 +29,7 @@ definitions:
             type: string
       execution:
         type: object
+        required: [executable]
         properties:
           executable:
             type: string
@@ -41,7 +42,7 @@ definitions:
       validation:
         type: object
         properties:
-          stdin:
+          stdout:
             type: object
             properties:
               expectedContent:

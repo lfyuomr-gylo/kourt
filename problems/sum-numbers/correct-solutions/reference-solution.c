@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 enum {
     BASE = 27,
@@ -35,7 +37,7 @@ main(int argc, char *argv[])
     sscanf(argv[2], "%x", &y);
     int z;
 
-    z = strtol(argv[1], NULL, BASE);
+    z = read_number_from_stdin();
     double result = x + y + z;
     printf("%.3f\n", result);
 }

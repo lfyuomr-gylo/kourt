@@ -12,17 +12,17 @@ tests:
       stdin:
         text: "3"
     validation:
-      stdin:
+      stdout:
         expectedContent:
-          text: "3.000"
+          text: "6.000"
   - execution:
       cmdArgs:
         - "1.5239"
         - "2"
-      stdin: 
+      stdin:
         text: "3"
     validation:
-      stdin: 
+      stdout:
         expectedContent: 
           text: "6.524"
   - execution:
@@ -32,6 +32,6 @@ tests:
       stdin:
         text: "10"
     validation:
-      stdin:
+      stdout:
         expectedContent:
           text: "38.000"

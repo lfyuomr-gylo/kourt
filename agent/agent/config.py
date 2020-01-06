@@ -12,6 +12,12 @@ with _schema_path.open('r') as f:
 
 
 def load_config(config_path: pathlib.Path) -> list:
+    """
+    Load test definitions from config.
+
+    :param config_path: path to the file containing test suite configuration
+    :return: list of Munch objects containing test definitions as they are specified in the configuration
+    """
     with config_path.open('r') as f:
         config = yaml.full_load(f)
     config = _validate_and_set_defaults(config)
@@ -19,7 +25,8 @@ def load_config(config_path: pathlib.Path) -> list:
 
 
 def _validate_and_set_defaults(config: dict):
-    jsonschema.validate(instance=config, schema=_TEST_SUITE_SCHEMA)
+    # TODO: нужно реализовать установку дефолтных значений из схемы здесь.
+    # jsonschema.validate(instance=config, schema=_TEST_SUITE_SCHEMA)
     return config
 
 
@@ -35,7 +42,7 @@ def _extract_test_suites(config: dict):
             value[key] = apply_template(value.get(key, None), template_value)
         return value
 
-    template = config.get('testTemplate', None)
+    template = munch.munchify(config.get('testTemplate', None))
     test_suites = map(munch.munchify, config['tests'])
-    test_suites = map(lambda test_suite: apply_template(test_suite, template), config['tests'])
+    test_suites = map(lambda test_suite: apply_template(test_suite, template), test_suites)
     return list(test_suites)

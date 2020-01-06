@@ -56,10 +56,12 @@ definitions:
                 type: integer
                 default: 0
 type: object
+required: [tests]
 properties:
   testTemplate:
     $ref: '#/definitions/testDefinition'
   tests:
     type: array
+    minItems: 1
     items:
       $ref: '#/definitions/testDefinition'

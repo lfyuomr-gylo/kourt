@@ -1,6 +1,7 @@
 "$schema": http://json-schema.org/draft-07/schema
 definitions:
   streamContent:
+    default: {const: none}
     oneOf:
       - type: object
         additionalProperties: false
@@ -35,12 +36,14 @@ definitions:
             type: string
           cmdArgs:
             type: array
+            default: []
             items:
               type: string
           stdin:
             $ref: '#/definitions/streamContent'
       validation:
         type: object
+        default: {}
         properties:
           stdout:
             type: object
@@ -52,6 +55,7 @@ definitions:
                 default: true
           returnStatus:
             type: object
+            default: {}
             properties:
               expectedValue:
                 type: integer
@@ -60,7 +64,12 @@ type: object
 required: [tests]
 properties:
   testTemplate:
-    $ref: '#/definitions/testDefinition'
+    additionalProperties: true
+    description: |
+      Template structure should follow the same rules as test descriptions structure,
+      except that no property is required.
+
+      Template is used as a set of predefined test settings and is applied to every test specified in ``test`` field.
   tests:
     type: array
     minItems: 1

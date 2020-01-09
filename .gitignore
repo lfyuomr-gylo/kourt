@@ -1,2 +1,5 @@
-cmake-build-*/
 .idea/
+
+.venv/
+__pycache__/
+.pytest_cache/

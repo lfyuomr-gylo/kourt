@@ -118,7 +118,35 @@ class CProgramRunningTests(unittest.TestCase):
                 expected_descriptors = {0, 1, 2}
                 self.assertEqual(actual_descriptors, expected_descriptors)
 
-    def _execute_program_with_runner(self, working_dir: str, program_text):
+    def t_read_size_shrink_should_make_read_syscall_to_read_less_bytes_than_requested(self):
+        with tempfile.TemporaryDirectory() as working_dir:
+            stdin = "123"
+            # language=C
+            results = self._execute_program_with_runner(
+                working_dir,
+                r"""
+                    #include <unistd.h>
+                    int main() {
+                        char buf[10];
+                        ssize_t bytes_read = read(0, buf, sizeof(buf));
+                        write(1, buf, butes_read);
+                        for (ssize_t bytes_written = 0; bytes_written < bytes_read; ) {
+                            bytes_written += write(1, buf + bytes_written, bytes_read - bytes_written);
+                        }
+                    }
+                """,
+                config_file='{"interceptors": [{"name": "ReadSizeShrinkInterceptor"}]}',
+                stdin=stdin
+            )
+
+            with open(results.stdout_file, 'r') as f:
+                stdout = f.read()
+                self.assertTrue(stdout < stdin,
+                                f"Expected stdout '{stdout}' to be substring of initial stdin '{stdin}'")
+                self.assertTrue(stdout == stdin[:len(stdout)],
+                                f"Expected stdout '{stdout}' to be substring of initial stdin '{stdin}'")
+
+    def _execute_program_with_runner(self, working_dir: str, program_text, config_file: str = '/dev/null', stdin=None):
         program_filename = 'program.c'
         executable_filename = 'program'
 
@@ -129,11 +157,12 @@ class CProgramRunningTests(unittest.TestCase):
             f"g++ '{program_filename}' -o '{executable_filename}'",
             shell=True,
             check=True,
-            cwd=working_dir
+            cwd=working_dir,
+            input=stdin
         )
 
         # Execute with runner
-        subprocess.run([RUNNER_EXECUTABLE, '/dev/null', executable_filename], cwd=working_dir, check=True)
+        subprocess.run([RUNNER_EXECUTABLE, config_file, executable_filename], cwd=working_dir, check=True)
         return self.ExecutionResults(
             stdout_file=f'{working_dir}/stdout.txt',
             stderr_file=f'{working_dir}/stderr.txt',
@@ -142,6 +171,7 @@ class CProgramRunningTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    print("======================== HELLO =======================")
     parser = argparse.ArgumentParser()
     parser.add_argument('runner_executable')
     parser.add_argument('unittest_args', nargs=argparse.REMAINDER)

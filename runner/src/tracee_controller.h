@@ -1,30 +1,28 @@
 #ifndef RUNNER_SRC_TRACEE_CONTROLLER_H_
 #define RUNNER_SRC_TRACEE_CONTROLLER_H_
 
-#include "tracee.h"
+#include <vector>
 
-enum class TraceeStopMoment {
-  kBeforeSyscallEnter,
-  kBeforeSyscallExit,
-  kBeforeSignalDelivery,
-  kGroupStop,
-  /**
-   *   Enabled through PTRACE_O_TRACEEXIT option.
-   */
-      kBeforeTraceeDeath
-};
+#include "tracing.h"
+#include "interceptors.h"
 
 class TraceeController {
  public:
-  explicit TraceeController(Tracee &tracee);
+  // TODO: use smart pointers here
+  TraceeController(Tracee &tracee, std::vector<TraceeInterceptor *> interceptors);
 
+  /**
+   * @return status of the tracee as returned by <code>waitpid</code>
+   */
+  int ExecuteTracee();
  private:
-  TraceeStopMoment DetermineStopMoment(int wait_status);
-  TraceeStopMoment SyscallStop();
-  TraceeStopMoment SignalDeliveryStop();
-  TraceeStopMoment GroupStop();
-  TraceeStopMoment ExitStop();
+  StoppedTracee *DetermineStopMoment(int wait_status);
+  StoppedTracee *SyscallStop();
+  StoppedTracee *SignalDeliveryStop(int signal_number);
+  StoppedTracee *GroupStop();
+  StoppedTracee *ExitStop();
 
+  std::vector<TraceeInterceptor *> interceptors_;
   bool entered_syscall_;
   Tracee &tracee_;
 };

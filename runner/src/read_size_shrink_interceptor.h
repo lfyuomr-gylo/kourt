@@ -5,17 +5,19 @@
 
 #include "interceptors.h"
 
-class ReadSizeShrinkInterceptor : public SyscallInterceptor {
+class ReadSizeShrinkInterceptor : public TraceeInterceptor {
  public:
-  explicit ReadSizeShrinkInterceptor(Tracee &tracee);
+  ReadSizeShrinkInterceptor();
 
-  bool BeforeSyscallEntered() override;
-  void AfterSyscallReturned() override;
+ protected:
+  bool Intercept(BeforeSyscallStoppedTracee &tracee) override;
+  bool Intercept(AfterSyscallStoppedTracee &tracee) override;
 
  private:
   void ResetSizeRestoreNecessity();
-  bool should_restore_size_;
-  unsigned long size_to_restore_;
+
+  bool should_restore_size_{false};
+  size_t size_to_restore_{0};
 };
 
 #endif //RUNNER_SRC_READ_SIZE_SHRINK_INTERCEPTOR_H_

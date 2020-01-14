@@ -1,5 +1,5 @@
-#ifndef RUNNER_SRC_TRACEE_H_
-#define RUNNER_SRC_TRACEE_H_
+#ifndef RUNNER_SRC_TRACING_H_
+#define RUNNER_SRC_TRACING_H_
 
 #include <sys/ptrace.h>
 #include <sys/types.h>
@@ -120,4 +120,88 @@ class Tracee {
   pid_t tracee_pid_;
 };
 
-#endif //RUNNER_SRC_TRACEE_H_
+class StoppedTracee {
+ public:
+  explicit StoppedTracee(Tracee &tracee) :
+      tracee_(tracee) {
+    // nop
+  }
+  virtual ~StoppedTracee() = default;
+
+  virtual void ContinueExecution() {
+    tracee_.Ptrace(PTRACE_SYSCALL, nullptr, nullptr);
+  }
+
+ protected:
+  Tracee &tracee_;
+};
+
+class SyscallStoppedTracee : public StoppedTracee {
+ public:
+  using StoppedTracee::StoppedTracee;
+  ~SyscallStoppedTracee() override = default;
+
+  unsigned long SyscallNumber();
+  void SetSyscallNumber(unsigned long syscall_no);
+  unsigned long Arg1();
+  void SetArg1(unsigned long arg);
+  unsigned long Arg2();
+  void SetArg2(unsigned long arg);
+  unsigned long Arg3();
+  void SetArg3(unsigned long arg);
+  unsigned long Arg4();
+  void SetArg4(unsigned long arg);
+  unsigned long Arg5();
+  void SetArg5(unsigned long arg);
+  unsigned long Arg6();
+  void SetArg6(unsigned long arg);
+};
+
+class BeforeSyscallStoppedTracee : public SyscallStoppedTracee {
+ public:
+  using SyscallStoppedTracee::SyscallStoppedTracee;
+
+  // TODO: add 'EnterSyscall'
+};
+
+class AfterSyscallStoppedTracee : public SyscallStoppedTracee {
+ public:
+  using SyscallStoppedTracee::SyscallStoppedTracee;
+
+  long ReturnedValue();
+  void SetReturnedValue(long returned_value);
+
+  // TODO: add 'ReturnValue', 'SetReturnValue'
+};
+
+class BeforeSignalDeliveryStoppedTracee : public SyscallStoppedTracee {
+ public:
+  BeforeSignalDeliveryStoppedTracee(Tracee &tracee, int signal_number) :
+      SyscallStoppedTracee(tracee),
+      signal_number_(signal_number) {
+    // nop
+  }
+
+  void ContinueExecution() override {
+    tracee_.Ptrace(PTRACE_SYSCALL, nullptr, (void *) signal_number_);
+  }
+  // TODO: add 'SignalNumber', 'SetSignalNumber', 'SuppressSignal'
+ private:
+  int signal_number_;
+};
+
+class OnGroupStopStoppedTracee : public StoppedTracee {
+ public:
+  using StoppedTracee::StoppedTracee;
+};
+
+class BeforeTerminationStoppedTracee : public StoppedTracee {
+ public:
+  using StoppedTracee::StoppedTracee;
+
+  void ContinueExecution() override {
+    tracee_.Ptrace(PTRACE_CONT, nullptr, nullptr);
+  }
+};
+
+#endif //RUNNER_SRC_TRACING_H_

@@ -1,32 +1,30 @@
 #include <asm/unistd.h>
 
 #include "read_size_shrink_interceptor.h"
-#include "tracee.h"
+#include "tracing.h"
 
 #include <iostream>
 
-ReadSizeShrinkInterceptor::ReadSizeShrinkInterceptor(Tracee &tracee) :
-    SyscallInterceptor(tracee) {
+ReadSizeShrinkInterceptor::ReadSizeShrinkInterceptor() {
   ResetSizeRestoreNecessity();
 }
-bool ReadSizeShrinkInterceptor::BeforeSyscallEntered() {
-  auto regs = SyscallRegistersManipulator(tracee_);
-  std::cout << "Before Syscall " << regs.SyscallNo() << std::endl;
-  if (__NR_read == regs.SyscallNo()) {
-    auto size = regs.Arg3();
+
+bool ReadSizeShrinkInterceptor::Intercept(BeforeSyscallStoppedTracee &tracee) {
+  std::cout << "Before syscall " << tracee.SyscallNumber() << std::endl;
+  if (__NR_read == tracee.SyscallNumber()) {
+    auto size = tracee.Arg3();
     if (size > 1) {
       should_restore_size_ = true;
       size_to_restore_ = size;
-      regs.SetArg3(size - 1);
+      tracee.SetArg3(size - 1);
     }
   }
-  return should_restore_size_;
+  return false;
 }
 
-void ReadSizeShrinkInterceptor::AfterSyscallReturned() {
-  auto regs = SyscallRegistersManipulator(tracee_);
+bool ReadSizeShrinkInterceptor::Intercept(AfterSyscallStoppedTracee &tracee) {
   if (should_restore_size_) {
-    regs.SetArg3(size_to_restore_);
+    tracee.SetArg3(size_to_restore_);
   }
   ResetSizeRestoreNecessity();
 }
@@ -35,5 +33,3 @@ void ReadSizeShrinkInterceptor::ResetSizeRestoreNecessity() {
   should_restore_size_ = false;
   size_to_restore_ = 0;
 }
-
-

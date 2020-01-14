@@ -118,7 +118,7 @@ class CProgramRunningTests(unittest.TestCase):
                 expected_descriptors = {0, 1, 2}
                 self.assertEqual(actual_descriptors, expected_descriptors)
 
-    def t_read_size_shrink_should_make_read_syscall_to_read_less_bytes_than_requested(self):
+    def test_read_size_shrink_should_make_read_syscall_to_read_less_bytes_than_requested(self):
         with tempfile.TemporaryDirectory() as working_dir:
             stdin = "123"
             # language=C

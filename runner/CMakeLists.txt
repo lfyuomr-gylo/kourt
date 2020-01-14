@@ -16,12 +16,12 @@ FetchContent_MakeAvailable(nlohmann_json)
 ### ==== Runner executable
 
 add_executable(runner
-        src/main.cpp
-        src/logging.cpp
-        src/read_size_shrink_interceptor.cpp
         src/interceptors.cpp
-        src/syscall_registers_manipulator.x64.cpp
+        src/logging.cpp
+        src/main.cpp
+        src/read_size_shrink_interceptor.cpp
         src/tracee_controller.cpp
+        src/tracing.x86-64.cpp
         )
 target_link_libraries(runner nlohmann_json::nlohmann_json)
 

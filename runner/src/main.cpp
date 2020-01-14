@@ -11,6 +11,7 @@
 
 #include "logging.h"
 #include "interceptors.h"
+#include "tracee_controller.h"
 
 void PipeStdoutAndStderrToFiles(const nlohmann::json &config) {
   // TODO: handle syscall errors
@@ -46,7 +47,7 @@ void printExitStatus(int exit_status, const nlohmann::json &config) {
   out << json;
 }
 
-void InitInterceptors(Tracee &tracee, const nlohmann::json &config, std::vector<SyscallInterceptor *> *result) {
+void InitInterceptors(Tracee &tracee, const nlohmann::json &config, std::vector<TraceeInterceptor *> *result) {
   if (config.contains("interceptors")) {
     nlohmann::json interceptors = config["interceptors"];
     for (auto &interceptor : interceptors) {
@@ -81,28 +82,13 @@ int main(int argc, char **argv) {
   } else if (child_pid > 0) {
     // parent
     Tracee tracee(child_pid);
-    std::vector<SyscallInterceptor *> interceptors;
+    std::vector<TraceeInterceptor *> interceptors;
     InitInterceptors(tracee, config, &interceptors);
-    int child_status = waitpid(child_pid, &child_status, 0); // this is SIGTRAP-caused stop
-    bool before_syscall = false; // initially the child is stopped due to SIGTRAP
-    for (bool keep_tracing = true; keep_tracing;) {
-      tracee.Ptrace(PTRACE_SYSCALL, nullptr, nullptr);
-      child_status = tracee.Wait();
-      keep_tracing = WIFSTOPPED(child_status);
-      if (keep_tracing) {
-        before_syscall = !before_syscall;
-        for (auto interceptor : interceptors) {
-          if (before_syscall) {
-            interceptor->BeforeSyscallEntered();
-          } else {
-            interceptor->AfterSyscallReturned();
-          }
-        }
-      }
-    }
+    TraceeController controller(tracee, interceptors);
+    int child_status = controller.ExecuteTracee();
     printExitStatus(child_status, config);
   } else {
-        // TODO: handle fork failure correctly
-        exit(1);
-    }
+    // TODO: handle fork failure correctly
+    exit(1);
+  }
 }

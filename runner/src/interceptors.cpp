@@ -4,9 +4,9 @@
 #include "interceptors.h"
 #include "read_size_shrink_interceptor.h"
 
-SyscallInterceptor *CreateInterceptor(const std::string &interceptor_name, Tracee &tracee) {
+TraceeInterceptor *CreateInterceptor(const std::string &interceptor_name, Tracee &tracee) {
   if ("ReadSizeShrinkInterceptor" == interceptor_name) {
-    return new ReadSizeShrinkInterceptor(tracee);
+    return new ReadSizeShrinkInterceptor();
   } else {
     throw std::invalid_argument("Unknown interceptor name: '" + interceptor_name + "'");
   }

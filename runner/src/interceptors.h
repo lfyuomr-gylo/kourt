@@ -2,60 +2,53 @@
 #define RUNNER_SRC_INTERCEPTORS_H_
 
 #include <string>
+#include <unordered_map>
 
-#include "tracee.h"
+#include "tracing.h"
 
-class SyscallInterceptor {
+class TraceeInterceptor {
  public:
-  /**
-   * \return whether AfterSyscallReturned should be called or not for this syscall.
-   */
-  virtual bool BeforeSyscallEntered() = 0;
-  virtual void AfterSyscallReturned() = 0;
-
- protected:
- public:
-  explicit SyscallInterceptor(Tracee &tracee) :
-      tracee_(tracee) {
-    // nop
-  }
- protected:
-
-  Tracee &tracee_;
-};
-
-SyscallInterceptor *CreateInterceptor(const std::string &interceptor_name, Tracee &tracee);
-
-class SyscallRegistersManipulator {
- public:
-  explicit SyscallRegistersManipulator(Tracee &tracee) :
-      tracee_(tracee),
-      regs_{} {
-    tracee_.Ptrace(PTRACE_GETREGS, nullptr, &regs_);
+  /// @return whether additional interceptors may be applied to the tracee
+  ///         or this interceptor has continued tracee execution.
+  ///         In the latter case, execution controller should await the next Tracee stop.
+  virtual bool Intercept(StoppedTracee *a_tracee) {
+    if (auto tracee = dynamic_cast<BeforeSyscallStoppedTracee *>(a_tracee); tracee) {
+      return Intercept(*tracee);
+    }
+    if (auto tracee = dynamic_cast<AfterSyscallStoppedTracee *>(a_tracee); tracee) {
+      return Intercept(*tracee);
+    }
+    if (auto tracee = dynamic_cast<BeforeSignalDeliveryStoppedTracee *>(a_tracee); tracee) {
+      return Intercept(*tracee);
+    }
+    if (auto tracee = dynamic_cast<OnGroupStopStoppedTracee *>(a_tracee); tracee) {
+      return Intercept(*tracee);
+    }
+    if (auto tracee = dynamic_cast<BeforeTerminationStoppedTracee *>(a_tracee); tracee) {
+      return Intercept(*tracee);
+    }
+    WARN("Unknown StoppedTracee type: %s", typeid(*a_tracee).name());
+    return true;
   }
 
-  unsigned long SyscallNo();
-  void SetSyscallNo(unsigned long syscall_no);
-
-  long ReturnedValue();
-  void SetReturnedValue(long returned_value);
-
-  unsigned long Arg1();
-  void SetArg1(unsigned long arg);
-  unsigned long Arg2();
-  void SetArg2(unsigned long arg);
-  unsigned long Arg3();
-  void SetArg3(unsigned long arg);
-  unsigned long Arg4();
-  void SetArg4(unsigned long arg);
-  unsigned long Arg5();
-  void SetArg5(unsigned long arg);
-  unsigned long Arg6();
-  void SetArg6(unsigned long arg);
-
- private:
-  Tracee &tracee_;
-  struct user_regs_struct regs_;
+ protected:
+  virtual bool Intercept(BeforeSyscallStoppedTracee &tracee) {
+    return true;
+  }
+  virtual bool Intercept(AfterSyscallStoppedTracee &tracee) {
+    return true;
+  }
+  virtual bool Intercept(BeforeSignalDeliveryStoppedTracee &tracee) {
+    return true;
+  }
+  virtual bool Intercept(OnGroupStopStoppedTracee &tracee) {
+    return true;
+  }
+  virtual bool Intercept(BeforeTerminationStoppedTracee &tracee) {
+    return true;
+  }
 };
+
+TraceeInterceptor *CreateInterceptor(const std::string &interceptor_name, Tracee &tracee);
 
 #endif //RUNNER_SRC_INTERCEPTORS_H_

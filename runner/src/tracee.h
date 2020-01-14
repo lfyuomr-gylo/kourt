@@ -9,17 +9,37 @@
 
 #include <stdexcept>
 #include <cstring>
+#include <utility>
 
 #include "logging.h"
 
-class TraceeDead : public std::exception {
+class PtraceCallFailed : public std::exception {
  public:
-  explicit TraceeDead(std::string error_description) :
+  PtraceCallFailed(int error_code, std::string error_description) :
+      errno_(error_code),
       error_description_(std::move(error_description)) {
     // nop
   }
+
+  [[nodiscard]] int Errno() const {
+    return errno_;
+  }
+
+  [[nodiscard]] const char *what() const noexcept override {
+    return error_description_.c_str();
+  }
+
  private:
   std::string error_description_;
+  int errno_;
+};
+
+class TraceeDead : public PtraceCallFailed {
+ public:
+  explicit TraceeDead(std::string error_description) :
+      PtraceCallFailed(ESRCH, std::move(error_description)) {
+    // nop
+  }
 };
 
 class Tracee {
@@ -47,25 +67,25 @@ class Tracee {
       );
       switch (error) {
         case EBUSY:
-          throw std::runtime_error(std::string(ptrace_call) +
-              "an error with allocating or freeing a debug register occurred"
+          throw PtraceCallFailed(
+              error,
+              std::string(ptrace_call) + "an error with allocating or freeing a debug register occurred"
           );
         case EFAULT:
         case EIO:
-          throw std::invalid_argument(std::string(ptrace_call) +
-              "attempt to read or write from/to invalid memory area or invalid signal was specified for restart request"
+          throw PtraceCallFailed(
+              error,
+              std::string(ptrace_call) + "attempt to read or write from/to invalid memory area " +
+                  "or invalid signal was specified for restart request"
           );
         case EINVAL: {
-          throw std::invalid_argument(std::string(ptrace_call) + "invalid option");
+          throw PtraceCallFailed(error, std::string(ptrace_call) + "invalid option");
         }
         case EPERM: {
-          throw std::runtime_error(std::string(ptrace_call) + "Tracee is not allowed to be traced.");
-        }
-        case ESRCH: {
-          throw TraceeDead(ptrace_call);
+          throw PtraceCallFailed(error, std::string(ptrace_call) + "Tracee is not allowed to be traced.");
         }
         default: {
-          throw std::runtime_error(std::string(ptrace_call) + strerror(error));
+          throw PtraceCallFailed(error, std::string(ptrace_call) + strerror(error));
         }
       }
     } else {

@@ -21,6 +21,7 @@ add_executable(runner
         src/read_size_shrink_interceptor.cpp
         src/interceptors.cpp
         src/syscall_registers_manipulator.x64.cpp
+        src/tracee_controller.cpp
         )
 target_link_libraries(runner nlohmann_json::nlohmann_json)
 

@@ -5,7 +5,7 @@
 
 #include "interceptors.h"
 
-class ReadSizeShrinkInterceptor : public TraceeInterceptor {
+class ReadSizeShrinkInterceptor : public virtual NoOpStoppedTraceeInterceptor {
  public:
   ReadSizeShrinkInterceptor();
 

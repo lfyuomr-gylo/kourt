@@ -19,40 +19,41 @@ const char *LoggingLevelToString(LoggingLevel level);
 bool IsLoggingLevelActive(LoggingLevel level);
 
 template<typename... Params>
-void KourtLog(LoggingLevel level,
-              const char *file_name,
-              size_t line_number,
-              const std::string &message_template,
-              Params... message_params) {
-  if (IsLoggingLevelActive(level)) {
-    timespec raw_now{};
-    clock_gettime(CLOCK_REALTIME, &raw_now);
-    tm now{};
-    localtime_r(&raw_now.tv_sec, &now);
+void KourtDoLog(LoggingLevel level,
+                const char *file_name,
+                size_t line_number,
+                const std::string &message_template,
+                Params... message_params) {
+  timespec raw_now{};
+  clock_gettime(CLOCK_REALTIME, &raw_now);
+  tm now{};
+  localtime_r(&raw_now.tv_sec, &now);
 
-    const char *line_end = (message_template[message_template.length() - 1] == '\n')
-        ? ""
-        : "\n";
-    std::string template_str = "%.4d-%.2d-%.2dT%.2d:%.2d:%.2d.%.3u\t%s\t%s:%d\t" + message_template + line_end;
-    fprintf(
-        stderr,
-        template_str.c_str(),
-        1900 + now.tm_year,
-        now.tm_mon + 1,
-        now.tm_mday,
-        now.tm_hour,
-        now.tm_min,
-        now.tm_sec,
-        raw_now.tv_nsec / 1'000'000,
-        LoggingLevelToString(level),
-        file_name,
-        line_number,
-        message_params...
-    );
-  }
+  const char *line_end = (message_template[message_template.length() - 1] == '\n')
+      ? ""
+      : "\n";
+  std::string template_str = "%.4d-%.2d-%.2dT%.2d:%.2d:%.2d.%.3u\t%s\t%s:%d\t" + message_template + line_end;
+  fprintf(
+      stderr,
+      template_str.c_str(),
+      1900 + now.tm_year,
+      now.tm_mon + 1,
+      now.tm_mday,
+      now.tm_hour,
+      now.tm_min,
+      now.tm_sec,
+      raw_now.tv_nsec / 1'000'000,
+      LoggingLevelToString(level),
+      file_name,
+      line_number,
+      message_params...
+  );
 }
 
-#define LOG(level, args...) KourtLog(level, __FILE__, __LINE__, args);
+#define LOG(level, args...) \
+  if (IsLoggingLevelActive(level)) { \
+    KourtDoLog(level, __FILE__, __LINE__, args); \
+  }
 
 #ifndef TRACE
 #define TRACE(args...) LOG(LoggingLevel::kTrace, args)

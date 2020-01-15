@@ -10,13 +10,15 @@ ReadSizeShrinkInterceptor::ReadSizeShrinkInterceptor() {
 }
 
 bool ReadSizeShrinkInterceptor::Intercept(BeforeSyscallStoppedTracee &tracee) {
-  std::cout << "Before syscall " << tracee.SyscallNumber() << std::endl;
+  TRACE("Before syscall %l", tracee.SyscallNumber())
   if (__NR_read == tracee.SyscallNumber()) {
     auto size = tracee.Arg3();
     if (size > 1) {
       should_restore_size_ = true;
       size_to_restore_ = size;
-      tracee.SetArg3(size - 1);
+      auto size_to_read = 1UL;
+      DEBUG("change third syscall argument from %zu to %zu", size, size_to_read);
+      tracee.SetArg3(size_to_read);
     }
   }
   return false;
@@ -24,9 +26,11 @@ bool ReadSizeShrinkInterceptor::Intercept(BeforeSyscallStoppedTracee &tracee) {
 
 bool ReadSizeShrinkInterceptor::Intercept(AfterSyscallStoppedTracee &tracee) {
   if (should_restore_size_) {
+    DEBUG("change third syscall argument to %zu after syscall", size_to_restore_);
     tracee.SetArg3(size_to_restore_);
   }
   ResetSizeRestoreNecessity();
+  return false;
 }
 
 void ReadSizeShrinkInterceptor::ResetSizeRestoreNecessity() {

@@ -120,6 +120,8 @@ class Tracee {
   pid_t tracee_pid_;
 };
 
+class StoppedTraceeInterceptor;
+
 class StoppedTracee {
  public:
   explicit StoppedTracee(Tracee &tracee) :
@@ -131,6 +133,10 @@ class StoppedTracee {
   virtual void ContinueExecution() {
     tracee_.Ptrace(PTRACE_SYSCALL, nullptr, nullptr);
   }
+
+  /// @return whether this interceptor has restarted the tracee or not. If this method returns true,
+  ///         controller should not consider this tracee stopped anymore, but it should wait for the next stop.
+  virtual bool Intercept(StoppedTraceeInterceptor &visitor) = 0;
 
  protected:
   Tracee &tracee_;
@@ -161,6 +167,8 @@ class BeforeSyscallStoppedTracee : public SyscallStoppedTracee {
  public:
   using SyscallStoppedTracee::SyscallStoppedTracee;
 
+  bool Intercept(StoppedTraceeInterceptor &visitor) override;
+
   // TODO: add 'EnterSyscall'
 };
 
@@ -168,24 +176,32 @@ class AfterSyscallStoppedTracee : public SyscallStoppedTracee {
  public:
   using SyscallStoppedTracee::SyscallStoppedTracee;
 
+  bool Intercept(StoppedTraceeInterceptor &visitor) override;
+
   long ReturnedValue();
   void SetReturnedValue(long returned_value);
 
   // TODO: add 'ReturnValue', 'SetReturnValue'
 };
 
-class BeforeSignalDeliveryStoppedTracee : public SyscallStoppedTracee {
+class BeforeSignalDeliveryStoppedTracee : public StoppedTracee {
  public:
   BeforeSignalDeliveryStoppedTracee(Tracee &tracee, int signal_number) :
-      SyscallStoppedTracee(tracee),
+      StoppedTracee(tracee),
       signal_number_(signal_number) {
     // nop
   }
 
+  bool Intercept(StoppedTraceeInterceptor &visitor) override;
+
   void ContinueExecution() override {
     tracee_.Ptrace(PTRACE_SYSCALL, nullptr, (void *) signal_number_);
   }
-  // TODO: add 'SignalNumber', 'SetSignalNumber', 'SuppressSignal'
+
+  int SignalNumber() {
+    return signal_number_;
+  }
+  // TODO: add 'SetSignalNumber', 'SuppressSignal'
  private:
   int signal_number_;
 };
@@ -193,15 +209,42 @@ class BeforeSignalDeliveryStoppedTracee : public SyscallStoppedTracee {
 class OnGroupStopStoppedTracee : public StoppedTracee {
  public:
   using StoppedTracee::StoppedTracee;
+
+  bool Intercept(StoppedTraceeInterceptor &visitor) override;
 };
 
 class BeforeTerminationStoppedTracee : public StoppedTracee {
  public:
   using StoppedTracee::StoppedTracee;
 
+  bool Intercept(StoppedTraceeInterceptor &visitor) override;
+
   void ContinueExecution() override {
     tracee_.Ptrace(PTRACE_CONT, nullptr, nullptr);
   }
+};
+
+class StoppedTraceeInterceptor {
+ public:
+  /// @return whether this interceptor has restarted the tracee or not. If this method returns true,
+  ///         controller should not consider this tracee stopped anymore, but it should wait for the next stop.
+  virtual bool Intercept(BeforeSyscallStoppedTracee &stopped_tracee) = 0;
+
+  /// @return whether this interceptor has restarted the tracee or not. If this method returns true,
+  ///         controller should not consider this tracee stopped anymore, but it should wait for the next stop.
+  virtual bool Intercept(AfterSyscallStoppedTracee &stopped_tracee) = 0;
+
+  /// @return whether this interceptor has restarted the tracee or not. If this method returns true,
+  ///         controller should not consider this tracee stopped anymore, but it should wait for the next stop.
+  virtual bool Intercept(BeforeSignalDeliveryStoppedTracee &stopped_tracee) = 0;
+
+  /// @return whether this interceptor has restarted the tracee or not. If this method returns true,
+  ///         controller should not consider this tracee stopped anymore, but it should wait for the next stop.
+  virtual bool Intercept(OnGroupStopStoppedTracee &stopped_tracee) = 0;
+
+  /// @return whether this interceptor has restarted the tracee or not. If this method returns true,
+  ///         controller should not consider this tracee stopped anymore, but it should wait for the next stop.
+  virtual bool Intercept(BeforeTerminationStoppedTracee &stopped_tracee) = 0;
 };
 
 #endif //RUNNER_SRC_TRACING_H_

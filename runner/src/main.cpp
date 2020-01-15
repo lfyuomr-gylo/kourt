@@ -47,7 +47,9 @@ void printExitStatus(int exit_status, const nlohmann::json &config) {
   out << json;
 }
 
-void InitInterceptors(Tracee &tracee, const nlohmann::json &config, std::vector<TraceeInterceptor *> *result) {
+void InitInterceptors(Tracee &tracee,
+                      const nlohmann::json &config,
+                      std::vector<StoppedTraceeInterceptor *> *result) {
   if (config.contains("interceptors")) {
     nlohmann::json interceptors = config["interceptors"];
     for (auto &interceptor : interceptors) {
@@ -68,7 +70,9 @@ int main(int argc, char **argv) {
     if (config_stream.peek() != std::ifstream::traits_type::eof()) {
       // read only if the config is non-empty
       config_stream >> config;
-      std::cout << "Successfully loaded config " << config << std::endl;
+      INFO("Successfully loaded configuration %s", config.dump(2, ' ').c_str())
+    } else {
+      WARN("Failed to load configuration from config file %s. It either does not exist or is empty", argv[1])
     }
   }
   pid_t child_pid = fork();
@@ -82,7 +86,7 @@ int main(int argc, char **argv) {
   } else if (child_pid > 0) {
     // parent
     Tracee tracee(child_pid);
-    std::vector<TraceeInterceptor *> interceptors;
+    std::vector<StoppedTraceeInterceptor *> interceptors;
     InitInterceptors(tracee, config, &interceptors);
     TraceeController controller(tracee, interceptors);
     int child_status = controller.ExecuteTracee();

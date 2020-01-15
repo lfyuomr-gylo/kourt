@@ -9,7 +9,7 @@
 class TraceeController {
  public:
   // TODO: use smart pointers here
-  TraceeController(Tracee &tracee, std::vector<TraceeInterceptor *> interceptors);
+  TraceeController(Tracee &tracee, const std::vector<StoppedTraceeInterceptor *> &interceptors);
 
   /**
    * @return status of the tracee as returned by <code>waitpid</code>
@@ -22,7 +22,7 @@ class TraceeController {
   StoppedTracee *GroupStop();
   StoppedTracee *ExitStop();
 
-  std::vector<TraceeInterceptor *> interceptors_;
+  std::vector<StoppedTraceeInterceptor *> interceptors_;
   bool entered_syscall_;
   Tracee &tracee_;
 };

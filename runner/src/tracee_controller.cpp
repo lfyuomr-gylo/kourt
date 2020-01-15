@@ -1,13 +1,46 @@
-#include <utility>
-
 #include "tracee_controller.h"
 #include "tracing.h"
+#include "logging.h"
 
-TraceeController::TraceeController(Tracee &tracee, std::vector<TraceeInterceptor *> interceptors) :
-    interceptors_(std::move(interceptors)),
+class LoggingInterceptor : public virtual StoppedTraceeInterceptor {
+  bool Intercept(BeforeSyscallStoppedTracee &stopped_tracee) override {
+    LOG(level_, "Stopped before syscall %d", stopped_tracee.SyscallNumber())
+    return false;
+  }
+
+  bool Intercept(AfterSyscallStoppedTracee &stopped_tracee) override {
+    LOG(level_, "Stopped after syscall %d", stopped_tracee.SyscallNumber())
+    return false;
+  }
+
+  bool Intercept(BeforeSignalDeliveryStoppedTracee &stopped_tracee) override {
+    LOG(level_, "Stopped before delivery of signal %d", stopped_tracee.SignalNumber())
+    return false;
+  }
+
+  bool Intercept(OnGroupStopStoppedTracee &stopped_tracee) override {
+    LOG(level_, "Stopped on group stop")
+    return false;
+  }
+
+  bool Intercept(BeforeTerminationStoppedTracee &stopped_tracee) override {
+    LOG(level_, "Stopped before termination")
+    return false;
+  }
+
+ private:
+  LoggingLevel level_{LoggingLevel::kDebug};
+};
+
+TraceeController::TraceeController(Tracee &tracee, const std::vector<StoppedTraceeInterceptor *> &interceptors) :
+    interceptors_{1 + interceptors.size()},
     tracee_(tracee),
     entered_syscall_(false) {
-  // nop
+  interceptors_[0] = new LoggingInterceptor();
+  for (size_t i = 0; i < interceptors.size(); i++) {
+    interceptors_[1 + i] = interceptors[i];
+  }
+  DEBUG("Successfully initialized TraceeController with %zu interceptors", interceptors_.size());
 }
 
 int TraceeController::ExecuteTracee() {
@@ -21,14 +54,12 @@ int TraceeController::ExecuteTracee() {
     keep_tracing = WIFSTOPPED(wait_status);
     if (keep_tracing) {
       auto stopped_tracee = DetermineStopMoment(wait_status);
-      bool tracee_restarted = false;
-      for (auto interceptor : interceptors_) {
-        tracee_restarted = interceptor->Intercept(stopped_tracee);
-        if (!tracee_restarted) {
-          tracee_restarted = true;
-        }
+      bool tracee_is_stopped = true;
+      for (auto interceptor = interceptors_.begin(); tracee_is_stopped && interceptor < interceptors_.end();
+           ++interceptor) {
+        tracee_is_stopped = !stopped_tracee->Intercept(**interceptor);
       }
-      if (!tracee_restarted) {
+      if (tracee_is_stopped) {
         stopped_tracee->ContinueExecution();
       }
       delete stopped_tracee;
@@ -52,7 +83,7 @@ StoppedTracee *TraceeController::DetermineStopMoment(int wait_status) {
   } else if (signal_number != SIGTRAP) {
     // either signal-delivery-stop or group-stop
     if (IsNotGroupStopSignal(signal_number)) {
-      return SignalDeliveryStop(0);
+      return SignalDeliveryStop(signal_number);
     } else {
       try {
         siginfo_t siginfo;

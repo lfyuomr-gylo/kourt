@@ -4,7 +4,7 @@
 #include "interceptors.h"
 #include "read_size_shrink_interceptor.h"
 
-TraceeInterceptor *CreateInterceptor(const std::string &interceptor_name, Tracee &tracee) {
+StoppedTraceeInterceptor *CreateInterceptor(const std::string &interceptor_name, Tracee &tracee) {
   if ("ReadSizeShrinkInterceptor" == interceptor_name) {
     return new ReadSizeShrinkInterceptor();
   } else {

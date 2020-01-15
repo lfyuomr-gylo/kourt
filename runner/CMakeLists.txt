@@ -22,7 +22,7 @@ add_executable(runner
         src/read_size_shrink_interceptor.cpp
         src/tracee_controller.cpp
         src/tracing.x86-64.cpp
-        )
+        src/tracing.cpp)
 target_link_libraries(runner nlohmann_json::nlohmann_json)
 
 enable_testing()

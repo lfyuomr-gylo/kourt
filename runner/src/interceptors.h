@@ -1,6 +1,7 @@
 #ifndef RUNNER_SRC_INTERCEPTORS_H_
 #define RUNNER_SRC_INTERCEPTORS_H_
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 
@@ -25,6 +26,6 @@ class NoOpStoppedTraceeInterceptor : public virtual StoppedTraceeInterceptor {
   }
 };
 
-StoppedTraceeInterceptor *CreateInterceptor(const std::string &interceptor_name, Tracee &tracee);
+std::unique_ptr<StoppedTraceeInterceptor> CreateInterceptor(const std::string &interceptor_name, Tracee &tracee);
 
 #endif //RUNNER_SRC_INTERCEPTORS_H_

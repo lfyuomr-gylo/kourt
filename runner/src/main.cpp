@@ -49,11 +49,11 @@ void printExitStatus(int exit_status, const nlohmann::json &config) {
 
 void InitInterceptors(Tracee &tracee,
                       const nlohmann::json &config,
-                      std::vector<StoppedTraceeInterceptor *> *result) {
+                      std::vector<std::unique_ptr<StoppedTraceeInterceptor>> *result) {
   if (config.contains("interceptors")) {
     nlohmann::json interceptors = config["interceptors"];
     for (auto &interceptor : interceptors) {
-      result->push_back(CreateInterceptor(interceptor["name"], tracee));
+      result->push_back(std::move(CreateInterceptor(interceptor["name"], tracee)));
     }
   }
 }
@@ -86,9 +86,9 @@ int main(int argc, char **argv) {
   } else if (child_pid > 0) {
     // parent
     Tracee tracee(child_pid);
-    std::vector<StoppedTraceeInterceptor *> interceptors;
+    std::vector<std::unique_ptr<StoppedTraceeInterceptor>> interceptors;
     InitInterceptors(tracee, config, &interceptors);
-    TraceeController controller(tracee, interceptors);
+    TraceeController controller(tracee, std::move(interceptors));
     int child_status = controller.ExecuteTracee();
     printExitStatus(child_status, config);
   } else {

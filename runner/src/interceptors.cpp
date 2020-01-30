@@ -1,12 +1,13 @@
 #include <exception>
 #include <stdexcept>
+#include <memory>
 
 #include "interceptors.h"
 #include "read_size_shrink_interceptor.h"
 
-StoppedTraceeInterceptor *CreateInterceptor(const std::string &interceptor_name, Tracee &tracee) {
+std::unique_ptr<StoppedTraceeInterceptor> CreateInterceptor(const std::string &interceptor_name, Tracee &tracee) {
   if ("ReadSizeShrinkInterceptor" == interceptor_name) {
-    return new ReadSizeShrinkInterceptor();
+    return std::unique_ptr<StoppedTraceeInterceptor>(new ReadSizeShrinkInterceptor());
   } else {
     throw std::invalid_argument("Unknown interceptor name: '" + interceptor_name + "'");
   }

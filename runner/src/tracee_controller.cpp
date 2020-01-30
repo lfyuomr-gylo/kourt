@@ -32,14 +32,14 @@ class LoggingInterceptor : public virtual StoppedTraceeInterceptor {
   LoggingLevel level_{LoggingLevel::kDebug};
 };
 
-TraceeController::TraceeController(Tracee &tracee, const std::vector<StoppedTraceeInterceptor *> &interceptors) :
-    interceptors_{1 + interceptors.size()},
+TraceeController::TraceeController(
+    Tracee &tracee,
+    std::vector<std::unique_ptr<StoppedTraceeInterceptor>> &&interceptors
+) :
+    interceptors_(std::move(interceptors)),
     tracee_(tracee),
     entered_syscall_(false) {
-  interceptors_[0] = new LoggingInterceptor();
-  for (size_t i = 0; i < interceptors.size(); i++) {
-    interceptors_[1 + i] = interceptors[i];
-  }
+  interceptors_.insert(interceptors_.cbegin(), std::move(std::make_unique<LoggingInterceptor>()));
   DEBUG("Successfully initialized TraceeController with %zu interceptors", interceptors_.size());
 }
 
@@ -55,14 +55,14 @@ int TraceeController::ExecuteTracee() {
     if (keep_tracing) {
       auto stopped_tracee = DetermineStopMoment(wait_status);
       bool tracee_is_stopped = true;
-      for (auto interceptor = interceptors_.begin(); tracee_is_stopped && interceptor < interceptors_.end();
+      for (auto interceptor = interceptors_.begin();
+           tracee_is_stopped && interceptor < interceptors_.end();
            ++interceptor) {
         tracee_is_stopped = !stopped_tracee->Intercept(**interceptor);
       }
       if (tracee_is_stopped) {
         stopped_tracee->ContinueExecution();
       }
-      delete stopped_tracee;
     }
   }
   return wait_status;
@@ -76,7 +76,7 @@ static bool IsNotGroupStopSignal(const int signal_no) {
   return signal_no != SIGSTOP && signal_no != SIGTSTP && signal_no != SIGTTIN && signal_no != SIGTTOU;
 }
 
-StoppedTracee *TraceeController::DetermineStopMoment(int wait_status) {
+std::unique_ptr<StoppedTracee> TraceeController::DetermineStopMoment(int wait_status) {
   const int signal_number = WSTOPSIG(wait_status);
   if (signal_number == (SIGTRAP | 0x80)) {
     return SyscallStop();
@@ -121,22 +121,22 @@ StoppedTracee *TraceeController::DetermineStopMoment(int wait_status) {
   }
 }
 
-StoppedTracee *TraceeController::SyscallStop() {
+std::unique_ptr<StoppedTracee> TraceeController::SyscallStop() {
   auto stopped_tracee = entered_syscall_
       ? (StoppedTracee *) new AfterSyscallStoppedTracee(tracee_)
       : (StoppedTracee *) new BeforeSyscallStoppedTracee(tracee_);
   entered_syscall_ = !entered_syscall_;
-  return stopped_tracee;
+  return std::unique_ptr<StoppedTracee>(stopped_tracee);
 }
 
-StoppedTracee *TraceeController::SignalDeliveryStop(int signal_number) {
-  return new BeforeSignalDeliveryStoppedTracee(tracee_, signal_number);
+std::unique_ptr<StoppedTracee> TraceeController::SignalDeliveryStop(int signal_number) {
+  return std::unique_ptr<StoppedTracee>(new BeforeSignalDeliveryStoppedTracee(tracee_, signal_number));
 }
 
-StoppedTracee *TraceeController::GroupStop() {
-  return new OnGroupStopStoppedTracee(tracee_);
+std::unique_ptr<StoppedTracee> TraceeController::GroupStop() {
+  return std::unique_ptr<StoppedTracee>(new OnGroupStopStoppedTracee(tracee_));
 }
 
-StoppedTracee *TraceeController::ExitStop() {
-  return new BeforeTerminationStoppedTracee(tracee_);
+std::unique_ptr<StoppedTracee> TraceeController::ExitStop() {
+  return std::unique_ptr<StoppedTracee>(new BeforeTerminationStoppedTracee(tracee_));
 }

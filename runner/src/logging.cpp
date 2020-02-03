@@ -1,6 +1,6 @@
 #include <mutex>
 
-#include "logging.h"
+#include <kourt/runner/logging.h>
 
 static LoggingLevel active_level = LoggingLevel::kTrace;
 static bool is_active_level_initialized = false;
@@ -17,7 +17,7 @@ static LoggingLevel LoggingLevelFromString(const char *raw_env_active_level) {
   } else if (env_active_level == "WARN") {
     return LoggingLevel::kWarn;
   } else if (env_active_level == "ERROR") {
-    return LoggingLevel::rError;
+    return LoggingLevel::kError;
   } else {
     WARN("Got unexpected logging level from environment: '%s'", raw_env_active_level);
     return active_level;
@@ -43,7 +43,7 @@ const char *LoggingLevelToString(LoggingLevel level) {
     case LoggingLevel::kDebug: return "DEBUG";
     case LoggingLevel::kInfo: return "INFO";
     case LoggingLevel::kWarn: return "WARN";
-    case LoggingLevel::rError: return "ERROR";
+    case LoggingLevel::kError: return "ERROR";
     default: throw std::logic_error("Unknown logging level: " + std::to_string(static_cast<int>(level)));
   }
 }

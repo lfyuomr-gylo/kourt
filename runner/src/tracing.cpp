@@ -1,4 +1,4 @@
-#include "tracing.h"
+#include <kourt/runner/tracing.h>
 
 bool AfterSyscallStoppedTracee::Intercept(StoppedTraceeInterceptor &visitor) {
   return visitor.Intercept(*this);

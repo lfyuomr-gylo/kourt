@@ -11,7 +11,7 @@ enum class LoggingLevel {
   kDebug = 20,
   kInfo = 30,
   kWarn = 40,
-  rError = 50
+  kError = 50
 };
 
 const char *LoggingLevelToString(LoggingLevel level);

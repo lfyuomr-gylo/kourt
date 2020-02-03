@@ -1,7 +1,7 @@
 #include <asm/unistd.h>
 
-#include "read_size_shrink_interceptor.h"
-#include "tracing.h"
+#include <kourt/runner/read_size_shrink_interceptor.h>
+#include <kourt/runner/tracing.h>
 
 #include <iostream>
 

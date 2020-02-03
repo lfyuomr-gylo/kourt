@@ -1,5 +1,10 @@
 ## How to build
 
+### Prerequisites
+
+* CMake 3.15 or newer
+* clang 9.0 or newer (should be set as default C++ compiler via ``CXX`` environment variable)
+
 ### Build runner
 
 To build runner just follow standard CMake project build procedure:

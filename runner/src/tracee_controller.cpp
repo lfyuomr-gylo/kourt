@@ -1,6 +1,6 @@
-#include "tracee_controller.h"
-#include "tracing.h"
-#include "logging.h"
+#include <kourt/runner/tracee_controller.h>
+#include <kourt/runner/tracing.h>
+#include <kourt/runner/logging.h>
 
 class LoggingInterceptor : public virtual StoppedTraceeInterceptor {
   bool Intercept(BeforeSyscallStoppedTracee &stopped_tracee) override {

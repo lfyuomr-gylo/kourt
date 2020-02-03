@@ -1,6 +1,6 @@
 #include <sys/user.h>
 
-#include "tracee_controller.h"
+#include <kourt/runner/tracee_controller.h>
 
 unsigned long SyscallStoppedTracee::SyscallNumber() {
   user_regs_struct registers{};

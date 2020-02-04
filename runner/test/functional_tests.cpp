@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <random>
 #include <functional>
 #include <filesystem>
@@ -5,9 +6,14 @@
 #include <memory>
 #include <vector>
 #include <unordered_set>
+#include <string>
 
 #include <cstdlib>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <dirent.h>
 
 #include <nlohmann/json.hpp>
 #include <gtest/gtest.h>
@@ -57,6 +63,22 @@ nlohmann::json ReadJsonFile(const fs::path &file_path) {
   return result;
 }
 
+void DiscoverOpenFileDescriptors(std::unordered_set<int> *out_file_descriptors) {
+  int dirfd = open("/dev/fd", O_RDONLY);
+  DIR *dir = fdopendir(dirfd);
+
+  for (dirent *entry = readdir(dir); entry; entry = readdir(dir)) {
+    const std::string entry_name = entry->d_name;
+    int fd;
+    if (entry_name != "." && entry_name != ".." && (fd = (int) std::stol(entry_name)) != dirfd) {
+      out_file_descriptors->insert(fd);
+    }
+  }
+
+  closedir(dir);
+  close(dirfd);
+}
+
 class FunctionalTest : public ::testing::Test {
  protected:
 
@@ -83,13 +105,18 @@ class FunctionalTest : public ::testing::Test {
   }
 
   void WithProgram(const std::string &program_text) {
+    char *compiler_path = std::getenv("CC");
+    if (!compiler_path) {
+      throw std::runtime_error("CC environment variable is not set");
+    }
+
     WithFile(program_source_file_, program_text);
-    auto compile_command = "$CC " + program_source_file_.string() + " -o " + program_binary_file_.string();
+    auto compile_command =
+        compiler_path + std::string(" ") + program_source_file_.string() + " -o " + program_binary_file_.string();
     if (int status = system(compile_command.c_str()); status == -1 || !WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
       throw std::runtime_error("Compilation failed");
     }
   }
-
   void WithConfig(const nlohmann::json &config) {
     config_file_ = working_directory_ / "config.json";
     WithFile(config_file_, config);
@@ -274,8 +301,17 @@ TEST_F(FunctionalTest, ThereShouldBeNoSurplusOpenFileDescriptorsInExecutedProgra
 
   // and: only stdin, stdout and stderr file descriptors are open in the executed program.
   std::vector<std::string> lines = ReadLines(program_stdout_file());
-  std::unordered_set<std::string> actual_file_descriptors(lines.begin(), lines.end());
-  std::unordered_set<std::string> expected_file_descriptors{"0", "1", "2"};
+  std::unordered_set<int> actual_file_descriptors;
+  for (auto &&line : lines) {
+    actual_file_descriptors.insert(std::stol(line));
+  }
+
+  // When the test is executed via `ctest`, there may be other open file descriptors than 0, 1 and 2,
+  // so we have to detect them and require the runner to not introduce any more file descriptors to the executed program.
+  // For more information, see https://github.com/lfyuomr-gylo/kourt/issues/7
+  std::unordered_set<int> expected_file_descriptors;
+  DiscoverOpenFileDescriptors(&expected_file_descriptors);
+
   ASSERT_EQ(actual_file_descriptors, expected_file_descriptors);
 }
 

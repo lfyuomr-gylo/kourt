@@ -3,7 +3,8 @@
 ### Prerequisites
 
 * CMake 3.15 or newer
-* clang 9.0 or newer (should be set as default C++ compiler via ``CXX`` environment variable)
+* gcc 9.2 or newer. **NOTE:** environment variables `CC` and `CXX` **should** be set properly. 
+  Otherwise, random failures may occur.
 
 ### Build runner
 

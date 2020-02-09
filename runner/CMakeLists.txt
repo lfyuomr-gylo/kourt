@@ -25,7 +25,8 @@ add_library(runner_lib
         src/read_size_shrink_interceptor.cpp
         src/tracee_controller.cpp
         src/tracing.x86-64.cpp
-        src/tracing.cpp)
+        src/tracing.cpp
+        src/elf.cpp)
 target_link_libraries(runner_lib nlohmann_json::nlohmann_json)
 
 add_executable(runner src/main.cpp)
